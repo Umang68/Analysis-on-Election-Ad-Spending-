@@ -7,8 +7,32 @@ import seaborn as sns
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.tree import DecisionTreeRegressor  # Import DecisionTreeRegressor
+from sklearn.svm import SVR  # Import SVR
+from sklearn.preprocessing import PolynomialFeatures
 import numpy as np
+
+# Add custom CSS to style buttons
+st.markdown(
+    """
+    <style>
+    .stButton>button {
+        background-color: lightyellow;
+        color: black;
+        border: None;
+        border-radius: 5px;
+        padding: 10px;
+        font-size: 16px;
+        transition: background-color 0.3s;
+    }
+    .stButton>button:hover {
+        background-color: yellow;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # Set page title
 st.title('Analysis on Election Ad Spending')
@@ -48,14 +72,14 @@ else:
     # Graph Buttons
     st.subheader('Election Ad Spending Analysis')
 
-    # Existing button for total ad spend by state
+    # Button 1: Total Ad Spend by State
     if st.button("Total Ad Spend by State"):
         state_ad_spend = merged_data.groupby('State')['Amount spent (INR)'].sum().reset_index()
         fig = go.Figure(data=[go.Bar(x=state_ad_spend['State'], y=state_ad_spend['Amount spent (INR)'])])
         fig.update_layout(title='Total Ad Spend by State', xaxis_title='State', yaxis_title='Amount Spent (INR)')
         st.plotly_chart(fig)
 
-    # Existing button for average voter turnout by state
+    # Button 2: Average Voter Turnout by State
     if st.button("Average Voter Turnout by State"):
         state_voter_turnout = merged_data.groupby('State')['Polled (%)'].mean().reset_index()
         fig = px.bar(state_voter_turnout, x='State', y='Polled (%)', color='Polled (%)',
@@ -63,7 +87,7 @@ else:
         fig.update_layout(xaxis_tickangle=-90, width=1000, height=600)
         st.plotly_chart(fig)
 
-    # Existing button for top 5 parties by ad spend
+    # Button 3: Top 5 Parties by Ad Spend
     if st.button("Top 5 Parties by Ad Spend"):
         advertisers['Amount spent (INR)'] = pd.to_numeric(advertisers['Amount spent (INR)'], errors='coerce')
         top_5_parties = advertisers.groupby('Page name')['Amount spent (INR)'].sum().sort_values(ascending=False).head(5)
@@ -71,19 +95,19 @@ else:
                      title='Top 5 Parties by Ad Spend')
         st.plotly_chart(fig)
 
-    # Existing button for ad spend vs voter turnout
+    # Button 4: Ad Spend vs Voter Turnout
     if st.button("Ad Spend vs Voter Turnout"):
         fig = px.scatter(merged_data, x='Amount spent (INR)', y='Polled (%)', color='State',
                          title='Ad Spend vs Voter Turnout by Constituency')
         st.plotly_chart(fig)
 
-    # Existing button for distribution of ad spend
+    # Button 5: Distribution of Ad Spend
     if st.button("Distribution of Ad Spend"):
         fig = px.histogram(merged_data, x='Amount spent (INR)', nbins=30, marginal='box',
                            title='Distribution of Ad Spend')
         st.plotly_chart(fig)
 
-    # Existing button for ad spend and voter turnout by election phase
+    # Button 6: Ad Spend and Voter Turnout by Election Phase
     if st.button("Ad Spend and Voter Turnout by Election Phase"):
         phase_analysis = merged_data.groupby('Phase').agg({'Amount spent (INR)': 'sum', 'Polled (%)': 'mean'}).reset_index()
         fig = go.Figure()
@@ -92,7 +116,7 @@ else:
         fig.update_layout(title='Ad Spend and Voter Turnout by Phase', yaxis2=dict(overlaying='y', side='right'))
         st.plotly_chart(fig)
 
-    # Existing button for comparison of actual and predicted spending
+    # Button 7: Comparison of Actual and Predicted Spending
     if st.button("Comparison of Actual and Predicted Spending"):
         # Data loading with actual columns names
         data = {
@@ -134,7 +158,7 @@ else:
         rmse = mean_squared_error(y_test, predictions, squared=False)
         st.write(f'Root Mean Square Error: {rmse}')
 
-    # Existing button for spending by platform
+    # Button 8: Spending by Platform
     if st.button("Spending by Platform"):
         # Load dataset into a DataFrame (Replace this with your actual dataset)
         data = {
@@ -165,7 +189,7 @@ else:
         # Show the plot in Streamlit
         st.pyplot(plt)
 
-    # New button for political party spending by platform
+    # Button 9: Political Party Spending by Platform
     if st.button("Political Party Spending by Platform"):
         # Example data with platform and party spending
         data = {
@@ -174,50 +198,24 @@ else:
             'Platform': ['Facebook', 'Instagram', 'Facebook', 'Instagram', 'Facebook', 'Instagram'],
             'Amount_Spent_INR': [193854342, 108787100, 50000000, 120000000, 60000000, 30000000]
         }
-
-        # Create DataFrame
         df_spending = pd.DataFrame(data)
 
-        # Create a pivot table to show spending by party and platform
-        pivot_table = df_spending.pivot_table(values='Amount_Spent_INR', index='Page_Name', columns='Platform', aggfunc='sum', fill_value=0)
+        # Create a bar chart using Plotly Express
+        fig = px.bar(df_spending, x='Page_Name', y='Amount_Spent_INR', color='Platform', barmode='group',
+                     title='Political Party Spending by Platform', text_auto=True)
 
-        # Plot settings for an attractive look
-        sns.set(style="whitegrid")  # Set grid style
-        colors = ['#1f77b4', '#ff7f0e']  # Custom color palette for Facebook and Instagram
+        # Display the chart
+        st.plotly_chart(fig)
 
-        # Plot the result as a grouped bar chart
-        ax = pivot_table.plot(kind='bar', figsize=(12, 7), color=colors, edgecolor='black', linewidth=1)
-
-        # Title and labels with larger font size for better readability
-        plt.title('Political Party Spending by Platform (Facebook vs Instagram)', fontsize=16, weight='bold')
-        plt.ylabel('Amount Spent (INR)', fontsize=14)
-        plt.xlabel('Political Party', fontsize=14)
-
-        # Adding value labels on top of each bar
-        for p in ax.patches:
-            ax.annotate(f'{int(p.get_height()):,}', (p.get_x() * 1.005, p.get_height() * 1.01), fontsize=12)
-
-        # Rotate x-axis labels for better visibility
-        plt.xticks(rotation=45, fontsize=12, weight='bold')
-
-        # Adding gridlines for y-axis
-        plt.grid(True, which='both', axis='y', linestyle='--', linewidth=0.7)
-
-        # Customizing the legend
-        plt.legend(title="Platform", fontsize=12, title_fontsize=14)
-
-        # Show the plot
-        plt.tight_layout()  # Adjust layout for better appearance
-        st.pyplot(plt)
-
-    # New button for election spending predictions
-    if st.button("Predict Election Spending for 2029"):
-        # Example data (assuming previous elections or some historical data)
+    # Button 10: Election Spending Predictions using Multiple Models
+        # Button 10: Election Spending Predictions using Multiple Models
+    if st.button("Election Spending Predictions using Multiple Models"):
+        # Example data (replace with actual data if available)
         data = {
-            'Year': [2014, 2019, 2024],  # Years of elections (replace with actual data)
-            'BJP_Amount_Spent_INR': [120000000, 193854342, 300000000],  # Example spendings (replace with actual data)
-            'Congress_Amount_Spent_INR': [80000000, 108787100, 150000000],
-            'AAP_Amount_Spent_INR': [20000000, 50000000, 80000000]
+            'Year': [2014, 2019, 2024],  # Years of elections
+            'BJP_Amount_Spent_INR': [120000000, 193854342, 300000000],  # BJP spendings
+            'Congress_Amount_Spent_INR': [80000000, 108787100, 150000000],  # Congress spendings
+            'AAP_Amount_Spent_INR': [20000000, 50000000, 80000000]  # AAP spendings
         }
 
         df = pd.DataFrame(data)
@@ -225,50 +223,84 @@ else:
         # Convert Year into numerical form for regression
         df['Year_Num'] = df['Year'] - df['Year'].min()
 
-        # Set up the linear regression model for each party
+        # Define models for prediction
+        models = {
+            'Linear Regression': LinearRegression(),
+            'Polynomial Regression (degree=2)': None,  # Handled separately
+            'Decision Tree': DecisionTreeRegressor(),
+            'SVR': SVR(kernel='rbf')
+        }
+
+        # Helper function to train models, predict, and calculate accuracy for each party
         def predict_spending(party_column):
-            X = df[['Year_Num']]  # Independent variable: year
-            y = df[party_column]  # Dependent variable: amount spent
+            X = df[['Year_Num']]  # Independent variable: Year
+            y = df[party_column]  # Dependent variable: Amount Spent
 
-            model = LinearRegression()
-            model.fit(X, y)
+            predictions = {}
+            accuracies = {}
 
-            # Predict next election spending (assuming next election is in 2029)
-            next_year = 2029 - df['Year'].min()
-            prediction = model.predict([[next_year]])
+            # Linear Regression
+            model_lr = models['Linear Regression']
+            model_lr.fit(X, y)
+            predictions['Linear Regression'] = model_lr.predict([[0], [5], [10], [15]])
+            accuracies['Linear Regression'] = mean_absolute_error(y, model_lr.predict(X))
 
-            return prediction[0], model
+            # Polynomial Regression (degree=2)
+            poly = PolynomialFeatures(degree=2)
+            X_poly = poly.fit_transform(X)
+            model_poly = LinearRegression()
+            model_poly.fit(X_poly, y)
+            predictions['Polynomial Regression (degree=2)'] = model_poly.predict(poly.transform([[0], [5], [10], [15]]))
+            accuracies['Polynomial Regression (degree=2)'] = mean_absolute_error(y, model_poly.predict(X_poly))
+
+            # Decision Tree
+            model_dt = models['Decision Tree']
+            model_dt.fit(X, y)
+            predictions['Decision Tree'] = model_dt.predict([[0], [5], [10], [15]])
+            accuracies['Decision Tree'] = mean_absolute_error(y, model_dt.predict(X))
+
+            # SVR
+            model_svr = models['SVR']
+            model_svr.fit(X, y)
+            predictions['SVR'] = model_svr.predict([[0], [5], [10], [15]])
+            accuracies['SVR'] = mean_absolute_error(y, model_svr.predict(X))
+
+            return predictions, accuracies
 
         # Predict spending for BJP, Congress, and AAP
-        bjp_spending, bjp_model = predict_spending('BJP_Amount_Spent_INR')
-        congress_spending, congress_model = predict_spending('Congress_Amount_Spent_INR')
-        aap_spending, aap_model = predict_spending('AAP_Amount_Spent_INR')
+        bjp_predictions, bjp_accuracies = predict_spending('BJP_Amount_Spent_INR')
+        congress_predictions, congress_accuracies = predict_spending('Congress_Amount_Spent_INR')
+        aap_predictions, aap_accuracies = predict_spending('AAP_Amount_Spent_INR')
 
-        # Show predictions
-        st.write(f"BJP predicted spending for 2029: {bjp_spending:.2f} INR")
-        st.write(f"Congress predicted spending for 2029: {congress_spending:.2f} INR")
-        st.write(f"AAP predicted spending for 2029: {aap_spending:.2f} INR")
+        # Function to plot predictions for a specific party
+        def plot_predictions(party_name, actual_values, predictions, accuracies):
+            plt.figure(figsize=(10, 6))
+            years = np.array([2014, 2019, 2024, 2029])
 
-        # Plot the predictions
-        plt.figure(figsize=(10, 6))
-        years = np.array([2014, 2019, 2024, 2029])
+            # Actual values
+            plt.plot(years[:3], actual_values, label=f'Actual {party_name} Spending', marker='o', color='black', linestyle='--')
 
-        # BJP Prediction
-        bjp_predicted = bjp_model.predict(np.array([[0], [5], [10], [15]]))
-        plt.plot(years, bjp_predicted, label='BJP', marker='o')
+            # Plot predicted spending
+            for model_name, preds in predictions.items():
+                plt.plot(years, preds, label=f'{party_name} {model_name}', linestyle='-', marker='o')
 
-        # Congress Prediction
-        congress_predicted = congress_model.predict(np.array([[0], [5], [10], [15]]))
-        plt.plot(years, congress_predicted, label='Congress', marker='o')
+            # Formatting the plot
+            plt.title(f'{party_name} Election Ad Spending Predictions for 2029')
+            plt.xlabel('Year')
+            plt.ylabel('Amount Spent (INR)')
+            plt.xticks(years)
+            plt.legend()
+            plt.grid(True)
 
-        # AAP Prediction
-        aap_predicted = aap_model.predict(np.array([[0], [5], [10], [15]]))
-        plt.plot(years, aap_predicted, label='AAP', marker='o')
+            # Show the plot
+            st.pyplot(plt)
 
-        plt.title('Election Spending Predictions (2029)')
-        plt.xlabel('Year')
-        plt.ylabel('Amount Spent (INR)')
-        plt.legend()
-        plt.grid(True)
-        plt.xticks(years)
-        st.pyplot(plt)
+            # Print accuracy scores for the party
+            st.write(f"Accuracy Scores (Mean Absolute Error) for {party_name}:")
+            for model_name, score in accuracies.items():
+                st.write(f"{model_name}: {score:.2f} INR")
+
+        # Plot predictions for each party
+        plot_predictions('BJP', df['BJP_Amount_Spent_INR'].values, bjp_predictions, bjp_accuracies)
+        plot_predictions('Congress', df['Congress_Amount_Spent_INR'].values, congress_predictions, congress_accuracies)
+        plot_predictions('AAP', df['AAP_Amount_Spent_INR'].values, aap_predictions, aap_accuracies)
